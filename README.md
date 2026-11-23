@@ -1,8 +1,6 @@
-# Remix 3: `disabled: ""` is disabled on the server and enabled after hydration
+# Remix 3: a nested component's `handle.id` changes at hydration
 
-A client entry spreads `{ disabled: '' }` onto a button. The server renders `disabled=""`, so the button is disabled. Once the page hydrates, the browser runtime sets `button.disabled = ''`, which is `false`, and the button becomes enabled. Nothing warns.
-
-`""` for a present boolean attribute is common in untyped attribute objects, such as the slot attributes of headless UI libraries. The same happens with `hidden`, `inert`, `required`, `checked`, `open` and `selected`.
+`Handle.id` is documented as a "stable identifier per component instance. Useful for HTML APIs like htmlFor, aria-owns". The client entry's own `handle.id` survives hydration. A component nested inside it gets one id from the server and another in the browser, so every attribute built from it is rewritten when the page hydrates.
 
 ## Run it
 
@@ -11,10 +9,12 @@ npm i
 npm run dev
 ```
 
-1. Run `curl -s http://localhost:44100/ | grep sold-out`. The server HTML has `<button type="button" id="sold-out" disabled="">`.
-2. Open `http://localhost:44100/` and run `document.getElementById('sold-out').disabled` in the console after the page loads.
+1. Run `curl -s http://localhost:44100/ | grep -o '<label for="[^"]*"'`. The server renders an id such as `for="s040c2614-2"`.
+2. Open `http://localhost:44100/` and, after it loads, run `document.querySelector('label').htmlFor` in the console.
 
-- **Expected:** `true`, as in the server HTML.
-- **Actual:** `false`. The button is enabled.
+- **Expected:** the id from the server HTML, as for the client entry's own id (`data-entry-id`), which survives hydration.
+- **Actual:** `c1`. The label and input are re-rendered with a new id.
 
-The whole app is `app/actions/controller.tsx` and `app/actions/public/sold-out-button.tsx`.
+Anything that captured the server id before hydration, such as a script, a CSS `:target` or an ARIA reference from outside the entry, points at an element that no longer has it.
+
+The whole app is `app/actions/controller.tsx` and `app/actions/public/size-field.tsx`.
